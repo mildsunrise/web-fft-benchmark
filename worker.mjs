@@ -1,0 +1,137 @@
+//@ts-check
+
+// dead simple memory allocator
+function makeAllocator(/** @type {WebAssembly.Memory} */ memory, memoryCursor=0) {
+	/**
+	 * @template T
+	 * @param {number} size
+	 * @param {{ new(buffer: ArrayBuffer, offset: number, length: number): T, BYTES_PER_ELEMENT: number }} cls
+	 */
+	return function allocate(size, cls, align=cls.BYTES_PER_ELEMENT) {
+		memoryCursor += ((-memoryCursor % align) + align) % align
+		const ptr = memoryCursor
+		memoryCursor += size * cls.BYTES_PER_ELEMENT
+		while (memory.buffer.byteLength < memoryCursor)
+			memory.grow(Math.max(1, (memory.buffer.byteLength * 2) / (1<<16)))
+		return Object.assign(() => new cls(memory.buffer, ptr, size), { ptr })
+	}
+}
+
+async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
+	let wasmMod
+	try {
+		const response = await fetch(wasmUrl)
+		if (((response.status/100) >> 0) !== 2)
+			throw new Error('status ' + response.status)
+		wasmMod = new WebAssembly.Module(await response.bytes())
+	} catch (e) {
+		throw new Error(`failed to load/compile ${wasmUrl}: ${e}`)
+	}
+	const { exports } = new WebAssembly.Instance(wasmMod)
+	const { memory, fftPhase, fftPhaseInit2, fftPhase4 } = /** @type {{ [key: string]: any }} */ (exports)
+	const allocate = makeAllocator(memory)
+
+	/**
+	 * Allocate resources for an FFT of a certain size.
+	 *
+	 * **Warning:** Every call to this function *permanently* allocates resources;
+	 * you're expected to only call it once per size and reuse the returned FFT.
+	 * If this is not desired, improve the simple allocator or use the pure JS version.
+	 *
+	 * @param {number} N - FFT points (must be a power of 2, and at least 4)
+	 * @returns {(x: Float32Array | Float64Array) => Float32Array} FFT function.
+	 *   must be passed an array of length 2*N (real0, imag0, real1, imag1, ...).
+	 *   the argument will be left untouched and an array of the same length and layout
+	 *   will be returned with the result. the first complex number of the array is DC.
+	 *   **the buffer is reused/overwritten on future invocations of the same function.**
+	 *   **the buffer can become invalid when future calls to makeFFT itself are made,
+	 *   as these can grow the WASM memory and invalidate the underlying ArrayBuffer.**
+	 */
+	return function makeFFT(N) {
+		if (N !== (N >>> 0))
+			throw new Error('not an u32')
+		const Nb = Math.log2(N) | 0
+		if (N !== (1 << Nb) || Nb < 2)
+			throw new Error('not a power of two, or too small')
+
+		// calculate the twiddle factors
+		const twiddle = allocate(2*N, Float32Array, 8)()
+		for (let i = 0; i < N; i++) {
+			const arg = - 2 * Math.PI * i / N;
+			twiddle[2*i+0] = Math.cos(arg);
+			twiddle[2*i+1] = Math.sin(arg);
+		}
+
+		let a = allocate(2*N, Float32Array, 8)
+		let b = allocate(2*N, Float32Array, 8)
+		return function fft(src) {
+			if (src.length !== 2*N)
+				throw new Error('invalid length')
+			a().set(src)
+			if (!radix4) {
+				for (let idx = 0; idx < Nb; idx++) {
+					fftPhase(N, twiddle.byteOffset, idx, a.ptr, b.ptr)
+					; [a, b] = [b, a]
+				}
+			} else {
+				if (Nb % 2)
+					fftPhaseInit2(N, a.ptr)
+				for (let idx = Nb % 2; idx < Nb; idx += 2) {
+					fftPhase4(N, twiddle.byteOffset, idx, a.ptr, b.ptr)
+					; [a, b] = [b, a]
+				}
+			}
+			return a()
+		}
+	}
+}
+
+const impls = [
+	{ makeFFT: import('./jsfft.mjs').then(x => x.default), label: 'pure JS', iterationFactor: 0.25 },
+	{ makeFFT: wasmFFT('./test.wasm'), label: 'radix 2 (LLVM)' },
+	{ makeFFT: wasmFFT('./test1.wasm'), label: 'radix 2 (AS)' },
+	//{ makeFFT: wasmFFT('./test-simd.wasm'), label: 'radix 2 (AS, SIMD)' },
+	{ makeFFT: wasmFFT('./test-radix4.wasm', true), label: 'radix 4 (LLVM)' },
+	//{ makeFFT: wasmFFT('./test-radix4-simd.wasm', true), label: 'radix 4 (AS, SIMD)' },
+]
+
+const uniformComplex = (size) => {
+		const result = new Float32Array(size*2)
+		for (var i = 0; i < size*2; i++)
+				result[i] = Math.random()*2-1
+		return result
+}
+
+const sizes = [ 128, 256, 512, 1024, 2048, 4096, 8192, 8192*2 ]
+
+const send = (/** @type {import("./types.d.ts").Message} */ msg) => postMessage(msg)
+
+const implFFTs = await Promise.all(impls.map(async ({ makeFFT, ...impl }) => {
+	const makeFFTfn = await makeFFT
+	return { ffts: sizes.map(size => makeFFTfn(size)), ...impl }
+}))
+
+send({ type: 'settings', impls: implFFTs.map(x => x.label), sizes })
+
+let sampleIdx = 0
+while (true) {
+	const inputs = sizes.map(size =>
+		[...Array(64)].map(() => uniformComplex(size))
+	)
+	for (const [sizeIdx, size] of sizes.entries()) {
+		const sample = implFFTs.map(impl => {
+			const fftInputs = inputs[sizeIdx]
+			const fft = impl.ffts[sizeIdx]
+			const iterationFactor = impl.iterationFactor || 1
+			const iterations = Math.ceil(20e6 * iterationFactor / (size * Math.log2(size)) / fftInputs.length) * fftInputs.length
+			const start = performance.now()
+			for (let i = 0; i < iterations; ++i)
+				fft(fftInputs[i%fftInputs.length])
+			const end = performance.now()
+			return /** @type {const} */ ([end - start, iterations])
+		})
+		const nextSample = sampleIdx + (sizeIdx === sizes.length - 1 ? 1 : 0)
+		send({ type: 'sample', size, sample, nextSample })
+	}
+	sampleIdx++
+}

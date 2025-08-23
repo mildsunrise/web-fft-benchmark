@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Web FFT benchmark</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<style>
+		* {
+			margin: 0;
+		}
+
+		html, body, main {
+			width: 100%;
+			height: 100%;
+			padding: 0;
+		}
+
+		main {
+			box-sizing: border-box;
+			padding: .8em;
+			display: flex;
+			flex-direction: column;
+			gap: 1em;
+		}
+
+		#errors {
+			color: red;
+			white-space: pre-wrap;
+		}
+
+		#results {
+			flex: 1;
+		}
+
+		.status {
+			text-align: center;
+		}
+
+		#copy {
+			margin-left: 5px;
+		}
+	</style>
+</head>
+<body>
+	<main>
+		<h1>Web FFT benchmark</h1>
+
+		<p>
+			This page benchmarks many FFT implementations in your browser and plots the results in a graph.
+			It assumes a modern browser that supports WASM SIMD.
+			Only normal (complex) FFTs and power-of-2 sizes are compared for now. The benchmark is single core.
+			All implementations work with 32-bit floats.
+			In consistency with <a rel="noopener" href="https://www.fftw.org/speed/">FFTw's benchmark</a>, the rates (in FFTs per μs) are multiplied by <em>5 N log<sub>2</sub>(N)</em> for normalization.
+		</p>
+
+		<noscript>
+			<p>Sorry, you kinda need JS for this...</p>
+		</noscript>
+
+		<p class="status">
+			<span id="loading">Starting up...</span>
+			<button id="copy" style="display: none;">Copy raw samples as JSON</button>
+		</p>
+
+		<div id="results"></div>
+
+		<p id="errors" style="display: none;"></p>
+	</main>
+
+	<script type="module" src="./index.mjs"></script>
+</body>
+</html>
