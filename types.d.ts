@@ -6,6 +6,7 @@ export interface SettingsMessage {
 	type: 'settings',
 	impls: string[],
 	sizes: number[],
+	failedImpls: string[],
 }
 
 export interface SampleMessage {

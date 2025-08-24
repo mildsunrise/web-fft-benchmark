@@ -111,13 +111,52 @@ const implFFTs = await Promise.all(impls.map(async ({ makeFFT, ...impl }) => {
 	return { ffts: sizes.map(size => makeFFTfn(size)), ...impl }
 }))
 
-send({ type: 'settings', impls: implFFTs.map(x => x.label), sizes })
+
+// VERIFICATION
+
+let usableImpls = implFFTs
+const refImpl = (await import('./reference.mjs')).default
+for (const [sizeIdx, size] of sizes.entries()) {
+	const refFFT = refImpl(size)
+	const testPairs = [...Array(8)]
+		.map(() => uniformComplex(size))
+		.map(input => ({ input, output: Float64Array.from(refFFT(input)) }))
+	usableImpls = usableImpls.filter(impl =>
+		testPairs.every(({input, output}) => {
+			let implOutput;
+			try {
+				implOutput = impl.ffts[sizeIdx](input)
+				if (implOutput.length !== output.length)
+					throw new Error('invalid output length')
+			} catch (ex) {
+				console.error('implementation', impl.label, 'failed on size', size, ex)
+				return false
+			}
+			const error = implOutput.map((x, i) => Math.abs(x - output[i]) / Math.max(1, output[i]))
+			const sortError = error.slice().sort().reverse()
+			if (sortError[0] > 1e-3) {
+				console.error('implementation', impl.label, 'failed on size', size, 'with errors', sortError, 'expected', output, 'got', implOutput)
+				return false
+			}
+			return true
+		})
+	)
+}
+
+const failedImpls = implFFTs.filter(x => !usableImpls.includes(x)).map(x => x.label)
+send({ type: 'settings', impls: usableImpls.map(x => x.label), sizes, failedImpls })
+
+if (!usableImpls.length)
+	throw new Error('no implementations to measure')
+
+
+// ACTUAL BENCHMARK
 
 let sampleIdx = 0
 while (true) {
 	for (const [sizeIdx, size] of sizes.entries()) {
 		const inputs = [...Array(64)].map(() => uniformComplex(size))
-		const sample = implFFTs.map(impl => {
+		const sample = usableImpls.map(impl => {
 			const fft = impl.ffts[sizeIdx]
 			const iterationFactor = impl.iterationFactor || 1
 			const iterations = Math.ceil(20e6 * iterationFactor / (size * Math.log2(size)) / inputs.length) * inputs.length
