@@ -115,18 +115,15 @@ send({ type: 'settings', impls: implFFTs.map(x => x.label), sizes })
 
 let sampleIdx = 0
 while (true) {
-	const inputs = sizes.map(size =>
-		[...Array(64)].map(() => uniformComplex(size))
-	)
 	for (const [sizeIdx, size] of sizes.entries()) {
+		const inputs = [...Array(64)].map(() => uniformComplex(size))
 		const sample = implFFTs.map(impl => {
-			const fftInputs = inputs[sizeIdx]
 			const fft = impl.ffts[sizeIdx]
 			const iterationFactor = impl.iterationFactor || 1
-			const iterations = Math.ceil(20e6 * iterationFactor / (size * Math.log2(size)) / fftInputs.length) * fftInputs.length
+			const iterations = Math.ceil(20e6 * iterationFactor / (size * Math.log2(size)) / inputs.length) * inputs.length
 			const start = performance.now()
 			for (let i = 0; i < iterations; ++i)
-				fft(fftInputs[i%fftInputs.length])
+				fft(inputs[i%inputs.length])
 			const end = performance.now()
 			return /** @type {const} */ ([end - start, iterations])
 		})
