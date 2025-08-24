@@ -87,12 +87,12 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 }
 
 const impls = [
-	{ makeFFT: import('./jsfft.mjs').then(x => x.default), label: 'pure JS', iterationFactor: 0.25 },
-	{ makeFFT: wasmFFT('./test.wasm'), label: 'radix 2 (LLVM)' },
-	{ makeFFT: wasmFFT('./test1.wasm'), label: 'radix 2 (AS)' },
-	//{ makeFFT: wasmFFT('./test-simd.wasm'), label: 'radix 2 (AS, SIMD)' },
-	{ makeFFT: wasmFFT('./test-radix4.wasm', true), label: 'radix 4 (LLVM)' },
-	//{ makeFFT: wasmFFT('./test-radix4-simd.wasm', true), label: 'radix 4 (AS, SIMD)' },
+	{ makeFFT: import('./impls/radix2-js.mjs').then(x => x.default), label: 'pure JS', iterationFactor: 0.25 },
+	{ makeFFT: wasmFFT('./impls/radix2-llvm.wasm'), label: 'radix 2 (LLVM)' },
+	{ makeFFT: wasmFFT('./impls/radix2-as.wasm'), label: 'radix 2 (AS)' },
+	//{ makeFFT: wasmFFT('./impls/test-simd.wasm'), label: 'radix 2 (AS, SIMD)' },
+	{ makeFFT: wasmFFT('./impls/radix4-llvm.wasm', true), label: 'radix 4 (LLVM)' },
+	//{ makeFFT: wasmFFT('./impls/test-radix4-simd.wasm', true), label: 'radix 4 (AS, SIMD)' },
 ]
 
 const uniformComplex = (size) => {
@@ -115,7 +115,7 @@ const implFFTs = await Promise.all(impls.map(async ({ makeFFT, ...impl }) => {
 // VERIFICATION
 
 let usableImpls = implFFTs
-const refImpl = (await import('./reference.mjs')).default
+const refImpl = (await import('./impls/reference.mjs')).default
 for (const [sizeIdx, size] of sizes.entries()) {
 	const refFFT = refImpl(size)
 	const testPairs = [...Array(8)]
