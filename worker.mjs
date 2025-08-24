@@ -102,7 +102,7 @@ const uniformComplex = (size) => {
 		return result
 }
 
-const sizes = [ 128, 256, 512, 1024, 2048, 4096, 8192, 8192*2 ]
+const sizes = [ 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768 ]
 
 const send = (/** @type {import("./types.d.ts").Message} */ msg) => postMessage(msg)
 
