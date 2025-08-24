@@ -1,17 +1,25 @@
 //@ts-check
 
-//import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm"
-import "https://cdn.plot.ly/plotly-3.1.0.min.js";
-
-const worker = new Worker('worker.mjs', { type: 'module' })
 const loadingP = /** @type {HTMLParagraphElement} */ (document.getElementById('loading'))
 const results = /** @type {HTMLDivElement} */ (document.getElementById('results'))
 const copyButton = /** @type {HTMLButtonElement} */ (document.getElementById('copy'))
 const errorsP = /** @type {HTMLParagraphElement} */ (document.getElementById('errors'))
 
-worker.addEventListener('error', ev => {
-	errorsP.innerText += `Worker error: ${ev.message}\n`
-})
+const logError = (/** @type {string} */ msg) => {
+	if (errorsP.innerText.trim().length) {
+		errorsP.innerText += '\n' + msg
+	} else {
+		errorsP.innerText = msg
+		errorsP.style.display = ''
+	}
+}
+
+try {
+
+// fire up worker
+const worker = new Worker('worker.mjs', { type: 'module' })
+worker.addEventListener('error', ev =>
+	logError(`Worker error: ${ev.message}`))
 
 let cbs = []
 worker.addEventListener('message', ev => {
@@ -22,7 +30,13 @@ worker.addEventListener('message', ev => {
 /** @type {() => Promise<import('./types.d.ts').Message>} */
 const receive = () => new Promise((resolve) => cbs.push(resolve))
 
-const settings = await receive()
+// wait for worker and plotly to be loaded
+const [settings, _] = await Promise.all([
+	receive(),
+	// @ts-expect-error
+	import("https://cdn.plot.ly/plotly-3.1.0.min.js")
+])
+
 if (settings.type !== 'settings')
 	throw new Error('unexpected message ' + settings.type)
 
@@ -145,4 +159,8 @@ function copyTextToClipboard(/** @type {string} */ text) {
 	}
 
 	document.body.removeChild(textArea);
+}
+
+} catch (ex) {
+	logError(`Main thread initialization error: ${ex.stack}`)
 }
