@@ -23,7 +23,7 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 		const response = await fetch(wasmUrl)
 		if (((response.status/100) >> 0) !== 2)
 			throw new Error('status ' + response.status)
-		wasmMod = new WebAssembly.Module(await response.bytes())
+		wasmMod = new WebAssembly.Module(await response.arrayBuffer())
 	} catch (e) {
 		throw new Error(`failed to load/compile ${wasmUrl}: ${e}`)
 	}
