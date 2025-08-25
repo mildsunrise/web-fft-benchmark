@@ -55,11 +55,14 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 			throw new Error('not a power of two, or too small')
 
 		// calculate the twiddle factors
-		const twiddle = allocate(2*N, Float32Array, 8)()
-		for (let i = 0; i < N; i++) {
-			const arg = - 2 * Math.PI * i / N;
-			twiddle[2*i+0] = Math.cos(arg);
-			twiddle[2*i+1] = Math.sin(arg);
+		const twiddle = allocate(2*N, Float32Array, 8)
+		{
+			const twiddleArr = twiddle()
+			for (let i = 0; i < N; i++) {
+				const arg = - 2 * Math.PI * i / N;
+				twiddleArr[2*i+0] = Math.cos(arg);
+				twiddleArr[2*i+1] = Math.sin(arg);
+			}
 		}
 
 		let a = allocate(2*N, Float32Array, 8)
@@ -70,14 +73,14 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 			a().set(src)
 			if (!radix4) {
 				for (let idx = 0; idx < Nb; idx++) {
-					fftPhase(N, twiddle.byteOffset, idx, a.ptr, b.ptr)
+					fftPhase(N, twiddle.ptr, idx, a.ptr, b.ptr)
 					; [a, b] = [b, a]
 				}
 			} else {
 				if (Nb % 2)
 					fftPhaseInit2(N, a.ptr)
 				for (let idx = Nb % 2; idx < Nb; idx += 2) {
-					fftPhase4(N, twiddle.byteOffset, idx, a.ptr, b.ptr)
+					fftPhase4(N, twiddle.ptr, idx, a.ptr, b.ptr)
 					; [a, b] = [b, a]
 				}
 			}
