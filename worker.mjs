@@ -90,7 +90,8 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 }
 
 const impls = [
-	{ makeFFT: import('./impls/radix2-js.mjs').then(x => x.default), label: 'pure JS', iterationFactor: 0.25 },
+	{ makeFFT: import('./impls/radix2-js.mjs').then(x => x.default), label: 'radix 2 (JS)', iterationFactor: 0.25 },
+	{ makeFFT: import('./impls/radix4-js.mjs').then(x => x.default), label: 'radix 4 (JS)', iterationFactor: 0.5 },
 	{ makeFFT: wasmFFT('./impls/radix2-llvm.wasm'), label: 'radix 2 (LLVM)' },
 	{ makeFFT: wasmFFT('./impls/radix2-as.wasm'), label: 'radix 2 (AS)' },
 	//{ makeFFT: wasmFFT('./impls/test-simd.wasm'), label: 'radix 2 (AS, SIMD)' },
