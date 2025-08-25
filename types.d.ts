@@ -1,6 +1,7 @@
 export type Message =
 	| SettingsMessage
 	| SampleMessage
+	| ErrorMessage
 
 export interface SettingsMessage {
 	type: 'settings',
@@ -14,4 +15,9 @@ export interface SampleMessage {
 	size: number,
 	sample: (readonly [number, number])[],
 	nextSample: number,
+}
+
+export interface ErrorMessage {
+	type: 'error',
+	stack: string,
 }

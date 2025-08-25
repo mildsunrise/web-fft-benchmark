@@ -89,6 +89,10 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 	}
 }
 
+const send = (/** @type {import("./types.d.ts").Message} */ msg) => postMessage(msg)
+
+try {
+
 const impls = [
 	{ makeFFT: import('./impls/radix2-js.mjs').then(x => x.default), label: 'radix 2 (JS)', iterationFactor: 0.25 },
 	{ makeFFT: import('./impls/radix4-js.mjs').then(x => x.default), label: 'radix 4 (JS)', iterationFactor: 0.5 },
@@ -107,8 +111,6 @@ const uniformComplex = (size) => {
 }
 
 const sizes = [ 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768 ]
-
-const send = (/** @type {import("./types.d.ts").Message} */ msg) => postMessage(msg)
 
 const implFFTs = await Promise.all(impls.map(async ({ makeFFT, ...impl }) => {
 	const makeFFTfn = await makeFFT
@@ -174,4 +176,8 @@ while (true) {
 		send({ type: 'sample', size, sample, nextSample })
 	}
 	sampleIdx++
+}
+
+} catch (ex) {
+	send({ type: 'error', stack: ex.stack })
 }

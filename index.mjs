@@ -19,13 +19,16 @@ try {
 // fire up worker
 const worker = new Worker('worker.mjs', { type: 'module' })
 worker.addEventListener('error', ev =>
-	logError(`Worker error: ${ev.message}`))
+	logError(`Worker uncaught error: ${ev.message}`))
 
 let cbs = []
 worker.addEventListener('message', ev => {
+	const data = /** @type {import('./types.d.ts').Message} */ (ev.data);
+	if (data.type === 'error')
+		return logError(`Worker failed: ${data.stack}`)
 	const oldCbs = cbs
 	cbs = []
-	oldCbs.forEach(cb => cb(ev.data))
+	oldCbs.forEach(cb => cb(data))
 })
 /** @type {() => Promise<import('./types.d.ts').Message>} */
 const receive = () => new Promise((resolve) => cbs.push(resolve))
