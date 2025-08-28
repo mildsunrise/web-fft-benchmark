@@ -100,6 +100,7 @@ const impls = [
 	{ makeFFT: wasmFFT('./impls/radix2-as.wasm'), label: 'radix 2 (AS)' },
 	//{ makeFFT: wasmFFT('./impls/test-simd.wasm'), label: 'radix 2 (AS, SIMD)' },
 	{ makeFFT: wasmFFT('./impls/radix4-llvm.wasm', true), label: 'radix 4 (LLVM)' },
+	{ makeFFT: wasmFFT('./impls/radix4-as.wasm', true), label: 'radix 4 (AS)' },
 	//{ makeFFT: wasmFFT('./impls/test-radix4-simd.wasm', true), label: 'radix 4 (AS, SIMD)' },
 ]
 
