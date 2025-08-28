@@ -89,7 +89,7 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 	}
 }
 
-const send = (/** @type {import("./types.d.ts").Message} */ msg) => postMessage(msg)
+const send = (/** @type {import("./types.d.ts").RxMessage} */ msg) => postMessage(msg)
 
 try {
 
@@ -153,6 +153,39 @@ for (const [sizeIdx, size] of sizes.entries()) {
 const failedImpls = implFFTs.filter(x => !usableImpls.includes(x)).map(x => x.label)
 send({ type: 'settings', impls: usableImpls.map(x => x.label), sizes, failedImpls })
 
+
+// PAUSE / RESUME MECHANISM
+
+let isRunning = true, nextSampleCb, nextSampleTimer
+const nextSamplePause = () => new Promise(resolve => {
+	if (nextSampleCb || nextSampleTimer)
+		throw new Error('concurrent calls to nextSamplePause')
+	nextSampleCb = () => {
+		nextSampleCb = undefined
+		nextSampleTimer = undefined
+		resolve(undefined)
+	}
+	if (isRunning)
+		nextSampleTimer = setTimeout(nextSampleCb, 0)
+})
+addEventListener("message", ev => {
+	const data = /** @type {import('./types.d.ts').TxMessage} */ (ev.data);
+	if (data.type === 'pause') {
+		isRunning = data.isRunning
+		if (nextSampleCb) {
+			if (isRunning) {
+				if (!nextSampleTimer)
+					nextSampleTimer = setTimeout(nextSampleCb, 0)
+			} else {
+				if (nextSampleTimer)
+					(clearTimeout(nextSampleTimer), nextSampleTimer = undefined)
+			}
+		}
+	} else {
+		throw new Error('unexpected message')
+	}
+})
+
 if (!usableImpls.length)
 	throw new Error('no implementations to measure')
 
@@ -175,6 +208,7 @@ while (true) {
 		})
 		const nextSample = sampleIdx + (sizeIdx === sizes.length - 1 ? 1 : 0)
 		send({ type: 'sample', size, sample, nextSample })
+		await nextSamplePause()
 	}
 	sampleIdx++
 }

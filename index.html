@@ -33,11 +33,12 @@
 		}
 
 		.status {
-			text-align: center;
-		}
-
-		#copy {
-			margin-left: 5px;
+			display: flex;
+			flex-direction: row;
+			flex-wrap: wrap;
+			gap: .5em;
+			justify-content: center;
+			align-items: baseline;
 		}
 	</style>
 </head>
@@ -61,7 +62,8 @@
 
 		<p class="status">
 			<span id="loading">Starting up...</span>
-			<button id="copy" style="display: none;">Copy raw samples as JSON</button>
+			<button id="pause" style="display: none;">⏸️ Pause</button>
+			<button id="copy" style="display: none;">📄 Copy raw samples as JSON</button>
 		</p>
 
 		<div id="results"></div>

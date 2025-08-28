@@ -2,6 +2,7 @@
 
 const loadingP = /** @type {HTMLParagraphElement} */ (document.getElementById('loading'))
 const results = /** @type {HTMLDivElement} */ (document.getElementById('results'))
+const pauseButton = /** @type {HTMLButtonElement} */ (document.getElementById('pause'))
 const copyButton = /** @type {HTMLButtonElement} */ (document.getElementById('copy'))
 const errorsP = /** @type {HTMLParagraphElement} */ (document.getElementById('errors'))
 
@@ -17,20 +18,21 @@ const logError = (/** @type {string} */ msg) => {
 try {
 
 // fire up worker
-const worker = new Worker('worker.mjs', { type: 'module' })
+const worker = new Worker('worker.mjs?version=2', { type: 'module' })
 worker.addEventListener('error', ev =>
 	logError(`Worker uncaught error: ${ev.message}`))
+const send = (/** @type {import("./types.d.ts").TxMessage} */ msg) => worker.postMessage(msg)
 
 let cbs = []
 worker.addEventListener('message', ev => {
-	const data = /** @type {import('./types.d.ts').Message} */ (ev.data);
+	const data = /** @type {import('./types.d.ts').RxMessage} */ (ev.data);
 	if (data.type === 'error')
 		return logError(`Worker failed: ${data.stack}`)
 	const oldCbs = cbs
 	cbs = []
 	oldCbs.forEach(cb => cb(data))
 })
-/** @type {() => Promise<import('./types.d.ts').Message>} */
+/** @type {() => Promise<import('./types.d.ts').RxMessage>} */
 const receive = () => new Promise((resolve) => cbs.push(resolve))
 
 // wait for worker and plotly to be loaded
@@ -57,6 +59,15 @@ copyButton.addEventListener('click', () => {
 	const { impls, sizes } = settings
 	copyTextToClipboard(JSON.stringify({ impls, sizes, rawSamples }))
 })
+
+let isRunning = true
+function setRunning(/** @type {boolean} */ running) {
+	if (running === isRunning) return
+	isRunning = running
+	send({ type: 'pause', isRunning })
+	pauseButton.innerText = isRunning ? "⏸️ Pause" : "▶️ Resume"
+}
+pauseButton.addEventListener('click', () => setRunning(!isRunning))
 
 let sampleIdx = 0
 while (true) {
@@ -122,6 +133,7 @@ while (true) {
 	})
 
 	copyButton.style.display = ''
+	pauseButton.style.display = ''
 	sampleIdx = msg.nextSample
 }
 

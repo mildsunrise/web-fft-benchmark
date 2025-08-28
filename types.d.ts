@@ -1,4 +1,4 @@
-export type Message =
+export type RxMessage =
 	| SettingsMessage
 	| SampleMessage
 	| ErrorMessage
@@ -20,4 +20,12 @@ export interface SampleMessage {
 export interface ErrorMessage {
 	type: 'error',
 	stack: string,
+}
+
+export type TxMessage =
+	| PauseMessage
+
+export interface PauseMessage {
+	type: "pause",
+	isRunning: boolean,
 }
