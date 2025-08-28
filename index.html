@@ -49,9 +49,10 @@
 		<p>
 			This page benchmarks many FFT implementations in your browser and plots the results in a graph.
 			It assumes a modern browser that supports WASM SIMD.
-			Only normal (complex) FFTs and power-of-2 sizes are compared for now. The benchmark is single core.
-			All implementations work with 32-bit floats.
+			Only complex FFTs and power-of-2 sizes are compared for now. The benchmark (and implementations) are single core.
+			All implementations are out of place and work with 32-bit floats.
 			In consistency with <a rel="noopener" href="https://www.fftw.org/speed/">FFTw's benchmark</a>, the rates (in FFTs per μs) are multiplied by <em>5 N log<sub>2</sub>(N)</em> for normalization.
+			You can find the source <a href="https://github.com/mildsunrise/web-fft-benchmark" rel="noopener">on GitHub</a>; improvements or new (better) implementations welcome!
 		</p>
 
 		<noscript>
