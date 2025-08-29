@@ -55,7 +55,7 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 			throw new Error('not a power of two, or too small')
 
 		// calculate the twiddle factors
-		const twiddle = allocate(2*N, Float32Array, 8)
+		const twiddle = allocate(2*N, Float32Array, 16)
 		{
 			const twiddleArr = twiddle()
 			for (let i = 0; i < N; i++) {
@@ -65,8 +65,8 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 			}
 		}
 
-		let a = allocate(2*N, Float32Array, 8)
-		let b = allocate(2*N, Float32Array, 8)
+		let a = allocate(2*N, Float32Array, 16)
+		let b = allocate(2*N, Float32Array, 16)
 		return function fft(src) {
 			if (src.length !== 2*N)
 				throw new Error('invalid length')
@@ -101,7 +101,7 @@ const impls = [
 	//{ makeFFT: wasmFFT('./impls/test-simd.wasm'), label: 'radix 2 (AS, SIMD)' },
 	{ makeFFT: wasmFFT('./impls/radix4-llvm.wasm', true), label: 'radix 4 (LLVM)' },
 	{ makeFFT: wasmFFT('./impls/radix4-as.wasm', true), label: 'radix 4 (AS)' },
-	//{ makeFFT: wasmFFT('./impls/test-radix4-simd.wasm', true), label: 'radix 4 (AS, SIMD)' },
+	{ makeFFT: wasmFFT('./impls/radix4-simd-as.wasm', true), label: 'radix 4 SIMD (AS)' },
 ]
 
 const uniformComplex = (size) => {
