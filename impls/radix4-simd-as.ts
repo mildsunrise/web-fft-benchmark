@@ -27,7 +27,8 @@ export function fftPhase4(
 	const stride = N >>> idx, mask = stride - 1, nmask = ~mask
 	if (stride > 16) {
 		for (let i = 0; i < N; i += stride) {
-			const ii = i << 2
+			const ii = src + (i << 2)
+			const iii = dst + i
 			const t1r = f32x4.splat(f32.load(twiddle+1*i,0)), t1i_raw = f32.load(twiddle+1*i,4)
 			const t2r = f32x4.splat(f32.load(twiddle+2*i,0)), t2i_raw = f32.load(twiddle+2*i,4)
 			const t3r = f32x4.splat(f32.load(twiddle+3*i,0)), t3i_raw = f32.load(twiddle+3*i,4)
@@ -35,11 +36,11 @@ export function fftPhase4(
 			const t2i = f32x4.shuffle(f32x4.splat(t2i_raw), f32x4.splat(-t2i_raw), 0, 4, 0, 4)
 			const t3i = f32x4.shuffle(f32x4.splat(t3i_raw), f32x4.splat(-t3i_raw), 0, 4, 0, 4)
 			for (let O = 0; O < stride; O += 4 << 2) {
-				const i1 = ii | O, o = i | O
-				const a = v128.load(src+i1+0*stride)
-				const B = v128.load(src+i1+1*stride)
-				const C = v128.load(src+i1+2*stride)
-				const D = v128.load(src+i1+3*stride)
+				const i1 = ii + O, o = iii + O
+				const a = v128.load(i1+0*stride)
+				const B = v128.load(i1+1*stride)
+				const C = v128.load(i1+2*stride)
+				const D = v128.load(i1+3*stride)
 				const b = f32x4.add(f32x4.mul(B, t1r), f32x4.shuffle(f32x4.mul(B, t1i), f32x4.splat(0), 1, 0, 3, 2))
 				const c = f32x4.add(f32x4.mul(C, t2r), f32x4.shuffle(f32x4.mul(C, t2i), f32x4.splat(0), 1, 0, 3, 2))
 				const d = f32x4.add(f32x4.mul(D, t3r), f32x4.shuffle(f32x4.mul(D, t3i), f32x4.splat(0), 1, 0, 3, 2))
@@ -48,10 +49,10 @@ export function fftPhase4(
 				const bdp = f32x4.add(b, d)
 				const bdm = f32x4.sub(b, d)
 				const bdm2 = f32x4.shuffle(bdm, f32x4.neg(bdm), 1, 4, 3, 6)
-				v128.store(dst+o+0*N, f32x4.add(acp, bdp))
-				v128.store(dst+o+1*N, f32x4.add(acm, bdm2))
-				v128.store(dst+o+2*N, f32x4.sub(acp, bdp))
-				v128.store(dst+o+3*N, f32x4.sub(acm, bdm2))
+				v128.store(o+0*N, f32x4.add(acp, bdp))
+				v128.store(o+1*N, f32x4.add(acm, bdm2))
+				v128.store(o+2*N, f32x4.sub(acp, bdp))
+				v128.store(o+3*N, f32x4.sub(acm, bdm2))
 			}
 		}
 	} else

@@ -48,23 +48,30 @@ pub unsafe fn fft_phase(
   dst: &mut [C64],
 ) {
   let N = N>>2;
-  let stride = N >> idx; let mask = stride - 1; let nmask = !mask;
-  for o in 0..N {
-    let i = o & nmask; let O = o & mask;
-    let i1 = (i<<2) | O;
-    let a = *src.get_unchecked(i1+0*stride);
-    let b = (*src.get_unchecked(i1+1*stride)) * (*twiddle.get_unchecked(1*i));
-    let c = (*src.get_unchecked(i1+2*stride)) * (*twiddle.get_unchecked(2*i));
-    let d = (*src.get_unchecked(i1+3*stride)) * (*twiddle.get_unchecked(3*i));
-    let acp = a + c;
-    let acm = a - c;
-    let bdp = b + d;
-    let bdm = b - d;
-    let bdm = bdm.div_i();
-    *dst.get_unchecked_mut(o+0*N) = acp + bdp;
-    *dst.get_unchecked_mut(o+1*N) = acm + bdm;
-    *dst.get_unchecked_mut(o+2*N) = acp - bdp;
-    *dst.get_unchecked_mut(o+3*N) = acm - bdm;
+  let stride = N >> idx;
+  unsafe { core::hint::assert_unchecked(stride > 0 && N % stride == 0) };
+  for i in (0..N).step_by(stride) {
+    let ii = i << 2;
+    let t1 = *twiddle.get_unchecked(1*i);
+    let t2 = *twiddle.get_unchecked(2*i);
+    let t3 = *twiddle.get_unchecked(3*i);
+    for O in 0..stride {
+      let i1 = ii | O;
+      let o = i | O;
+      let a = *src.get_unchecked(i1+0*stride);
+      let b = (*src.get_unchecked(i1+1*stride)) * t1;
+      let c = (*src.get_unchecked(i1+2*stride)) * t2;
+      let d = (*src.get_unchecked(i1+3*stride)) * t3;
+      let acp = a + c;
+      let acm = a - c;
+      let bdp = b + d;
+      let bdm = b - d;
+      let bdm = bdm.div_i();
+      *dst.get_unchecked_mut(o+0*N) = acp + bdp;
+      *dst.get_unchecked_mut(o+1*N) = acm + bdm;
+      *dst.get_unchecked_mut(o+2*N) = acp - bdp;
+      *dst.get_unchecked_mut(o+3*N) = acm - bdm;
+    }
   }
 }
 
@@ -92,6 +99,7 @@ pub unsafe fn fft_phase_init_2(
   dst: &mut [C64],
 ) {
   let N = N>>1;
+  unsafe { core::hint::assert_unchecked(N > 0) };
   for o in 0..N {
     let a = *dst.get_unchecked(o+0);
     let b = *dst.get_unchecked(o+N);

@@ -43,14 +43,19 @@ pub unsafe fn fft_phase(
   dst: &mut [C64],
 ) {
   let N = N>>1;
-  let stride = N >> idx; let mask = stride - 1; let nmask = !mask;
-  for o in 0..N {
-    let i = o & nmask; let O = o & mask;
-    let i1 = (i<<1) | O; let i2 = i1 + stride;
-    let a = *src.get_unchecked(i1);
-    let b = *src.get_unchecked(i2) * *twiddle.get_unchecked(i);
-    *dst.get_unchecked_mut(o+0) = a + b;
-    *dst.get_unchecked_mut(o+N) = a - b;
+  let stride = N >> idx;
+  unsafe { core::hint::assert_unchecked(stride > 0 && N % stride == 0) };
+  for i in (0..N).step_by(stride) {
+    let ii = i << 1;
+    let t = *twiddle.get_unchecked(i);
+    for O in 0..stride {
+      let i1 = ii | O;
+      let o = i | O;
+      let a = *src.get_unchecked(i1);
+      let b = *src.get_unchecked(i1+stride) * t;
+      *dst.get_unchecked_mut(o+0) = a + b;
+      *dst.get_unchecked_mut(o+N) = a - b;
+    }
   }
 }
 
