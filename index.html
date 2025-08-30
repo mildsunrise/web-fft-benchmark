@@ -28,8 +28,16 @@
 			white-space: pre-wrap;
 		}
 
+		#results-viewport {
+			flex-grow: 1;
+			min-height: 400px;
+			display: flex;
+			flex-direction: column;
+			overflow: auto;
+		}
 		#results {
-			flex: 1;
+			flex-grow: 1;
+			min-width: 500px;
 		}
 
 		.status {
@@ -67,7 +75,7 @@
 			<button id="copy" style="display: none;">📄 Copy raw samples as JSON</button>
 		</p>
 
-		<div id="results"></div>
+		<div id="results-viewport"><div id="results"></div></div>
 	</main>
 
 	<script type="module" src="./index.mjs"></script>
