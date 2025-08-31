@@ -70,14 +70,21 @@ function setRunning(/** @type {boolean} */ running) {
 pauseButton.addEventListener('click', () => setRunning(!isRunning))
 
 let sampleIdx = 0
+let animationFrame
 while (true) {
-	loadingP.innerText = `Getting sample ${sampleIdx}...`
 	const msg = await receive()
 	if (msg.type !== 'sample')
 		throw new Error('unexpected message ' + msg.type)
 	const sizeIdx = settings.sizes.indexOf(msg.size)
 	for (const [implIdx, sample] of msg.sample.entries())
 		rawSamples[implIdx][sizeIdx].push(sample)
+	sampleIdx = msg.nextSample
+	if (!animationFrame)
+		animationFrame = requestAnimationFrame(() => renderUI(settings))
+}
+
+function renderUI(/** @type {import("./types.d.ts").SettingsMessage} */ settings) {
+	animationFrame = undefined
 
 	/** @type {Plotly.Data[]} */
 	const errorTraces = []
@@ -134,7 +141,7 @@ while (true) {
 
 	copyButton.style.display = ''
 	pauseButton.style.display = ''
-	sampleIdx = msg.nextSample
+	loadingP.innerText = `Getting sample ${sampleIdx}...`
 }
 
 
