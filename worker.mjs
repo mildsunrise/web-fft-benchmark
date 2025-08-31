@@ -30,6 +30,7 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 	const { exports } = new WebAssembly.Instance(wasmMod)
 	const { memory, fftPhase, fftPhaseInit2, fftPhaseInit4, fftPhase4 } = /** @type {{ [key: string]: any }} */ (exports)
 	const allocate = makeAllocator(memory)
+	memory.grow(3*8)
 
 	/**
 	 * Allocate resources for an FFT of a certain size.
