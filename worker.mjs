@@ -28,7 +28,7 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 		throw new Error(`failed to load/compile ${wasmUrl}: ${e}`)
 	}
 	const { exports } = new WebAssembly.Instance(wasmMod)
-	const { memory, fftPhase, fftPhaseInit2, fftPhase4 } = /** @type {{ [key: string]: any }} */ (exports)
+	const { memory, fftPhase, fftPhaseInit2, fftPhaseInit4, fftPhase4 } = /** @type {{ [key: string]: any }} */ (exports)
 	const allocate = makeAllocator(memory)
 
 	/**
@@ -73,6 +73,10 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 			a().set(src)
 			if (!radix4) {
 				for (let idx = 0; idx < Nb; idx++) {
+					if (idx === 0 && fftPhaseInit2) {
+						fftPhaseInit2(N, a.ptr)
+						continue;
+					}
 					fftPhase(N, twiddle.ptr, idx, a.ptr, b.ptr)
 					; [a, b] = [b, a]
 				}
@@ -80,6 +84,10 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 				if (Nb % 2)
 					fftPhaseInit2(N, a.ptr)
 				for (let idx = Nb % 2; idx < Nb; idx += 2) {
+					if (idx === 0 && fftPhaseInit4) {
+						fftPhaseInit4(N, a.ptr)
+						continue;
+					}
 					fftPhase4(N, twiddle.ptr, idx, a.ptr, b.ptr)
 					; [a, b] = [b, a]
 				}

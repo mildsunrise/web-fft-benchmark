@@ -15,6 +15,29 @@ export function fftPhaseInit2(
 	}
 }
 
+export function fftPhaseInit4(
+	N: i32,
+	dst: usize, // &mut [f32; 2*N]
+): void {
+	N <<= (3 - 2)
+	for (let O = 0; O < N; O += 4 << 2) {
+		const o = dst + O
+		const a = v128.load(o+0*N)
+		const b = v128.load(o+1*N)
+		const c = v128.load(o+2*N)
+		const d = v128.load(o+3*N)
+		const acp = f32x4.add(a, c)
+		const acm = f32x4.sub(a, c)
+		const bdp = f32x4.add(b, d)
+		const bdm = f32x4.sub(b, d)
+		const bdm2 = f32x4.shuffle(bdm, f32x4.neg(bdm), 1, 4, 3, 6)
+		v128.store(o+0*N, f32x4.add(acp, bdp))
+		v128.store(o+1*N, f32x4.add(acm, bdm2))
+		v128.store(o+2*N, f32x4.sub(acp, bdp))
+		v128.store(o+3*N, f32x4.sub(acm, bdm2))
+	}
+}
+
 export function fftPhase4(
 	N: i32,
 	twiddle: usize, // &[u32; N]
@@ -57,15 +80,14 @@ export function fftPhase4(
 		}
 	} else
 		for (let o = 0; o < N; o += 2 << 2) {
-			const i = o & nmask, O = o & mask
-			const i1 = (i<<2) | O
+			const i1 = (o<<2)
 			const ar = f32.load(src+i1+0*stride,0), ai = f32.load(src+i1+0*stride,4)
 			const Br = f32.load(src+i1+1*stride,0), Bi = f32.load(src+i1+1*stride,4)
 			const Cr = f32.load(src+i1+2*stride,0), Ci = f32.load(src+i1+2*stride,4)
 			const Dr = f32.load(src+i1+3*stride,0), Di = f32.load(src+i1+3*stride,4)
-			const t1r = f32.load(twiddle+1*i,0), t1i = f32.load(twiddle+1*i,4)
-			const t2r = f32.load(twiddle+2*i,0), t2i = f32.load(twiddle+2*i,4)
-			const t3r = f32.load(twiddle+3*i,0), t3i = f32.load(twiddle+3*i,4)
+			const t1r = f32.load(twiddle+1*o,0), t1i = f32.load(twiddle+1*o,4)
+			const t2r = f32.load(twiddle+2*o,0), t2i = f32.load(twiddle+2*o,4)
+			const t3r = f32.load(twiddle+3*o,0), t3i = f32.load(twiddle+3*o,4)
 			const br = Br*t1r - Bi*t1i, bi = Bi*t1r + Br*t1i
 			const cr = Cr*t2r - Ci*t2i, ci = Ci*t2r + Cr*t2i
 			const dr = Dr*t3r - Di*t3i, di = Di*t3r + Dr*t3i
