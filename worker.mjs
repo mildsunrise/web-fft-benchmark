@@ -111,8 +111,8 @@ const impls = [
 	{ makeFFT: wasmFFT('./impls/radix4-llvm.orig.wasm', true), label: 'radix 4 (LLVM) (old)' },
 	{ makeFFT: wasmFFT('./impls/radix4-llvm.wasm', true), label: 'radix 4 (LLVM)' },
 	{ makeFFT: wasmFFT('./impls/radix4-as.wasm', true), label: 'radix 4 (AS)' },
-	{ makeFFT: wasmFFT('./impls/radix4-simd-as.wasm', true), label: 'radix 4 SIMD (AS)' },
-	{ makeFFT: wasmFFT('./impls/radix4-simd2-as.wasm', true), label: 'radix 4 packed SIMD (AS)' },
+	{ makeFFT: wasmFFT('./impls/radix4-simd-as.wasm', true), label: 'radix 4 SIMD (AS)', iterationFactor: 3 },
+	{ makeFFT: wasmFFT('./impls/radix4-simd2-as.wasm', true), label: 'radix 4 packed SIMD (AS)', iterationFactor: 3 },
 ]
 
 const uniformComplex = (size) => {
