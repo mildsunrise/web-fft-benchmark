@@ -38,7 +38,7 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 	 * you're expected to only call it once per size and reuse the returned FFT.
 	 * If this is not desired, improve the simple allocator or use the pure JS version.
 	 *
-	 * @param {number} N - FFT points (must be a power of 2, and at least 4)
+	 * @param {number} N - FFT points (must be a power of 2, and at least 8)
 	 * @returns {(x: Float32Array | Float64Array) => Float32Array} FFT function.
 	 *   must be passed an array of length 2*N (real0, imag0, real1, imag1, ...).
 	 *   the argument will be left untouched and an array of the same length and layout
@@ -51,7 +51,7 @@ async function wasmFFT(/** @type {string} */ wasmUrl, radix4=false) {
 		if (N !== (N >>> 0))
 			throw new Error('not an u32')
 		const Nb = Math.log2(N) | 0
-		if (N !== (1 << Nb) || Nb < 2)
+		if (N !== (1 << Nb) || Nb < 3)
 			throw new Error('not a power of two, or too small')
 
 		// calculate the twiddle factors
@@ -111,6 +111,7 @@ const impls = [
 	{ makeFFT: wasmFFT('./impls/radix4-llvm.wasm', true), label: 'radix 4 (LLVM)' },
 	{ makeFFT: wasmFFT('./impls/radix4-as.wasm', true), label: 'radix 4 (AS)' },
 	{ makeFFT: wasmFFT('./impls/radix4-simd-as.wasm', true), label: 'radix 4 SIMD (AS)' },
+	{ makeFFT: wasmFFT('./impls/radix4-simd2-as.wasm', true), label: 'radix 4 packed SIMD (AS)' },
 ]
 
 const uniformComplex = (size) => {
